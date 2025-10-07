@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
@@ -18,6 +17,7 @@ import {
   BookOpen,
   Award,
 } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
 interface NavItem {
   title: string
@@ -74,7 +74,13 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+  isMobile?: boolean
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+export function DashboardSidebar({ isMobile = false, isOpen = false, onClose }: DashboardSidebarProps) {
   const pathname = usePathname()
   const { user } = useAuth()
 
@@ -103,34 +109,51 @@ export function DashboardSidebar() {
     }
   })
 
+  const NavigationContent = () => (
+    <nav className="space-y-1 p-4">
+      {filteredNavItems.map((item) => {
+        const Icon = item.icon
+        const isActive = pathname === item.href
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={() => isMobile && onClose?.()}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Icon className="h-5 w-5" />
+            {item.title}
+          </Link>
+        )
+      })}
+    </nav>
+  )
+
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="left" className="w-64 p-0">
+          <SheetHeader className="flex h-16 items-center border-b px-6">
+            <SheetTitle className="text-xl font-bold text-primary">PROJETO A+</SheetTitle>
+          </SheetHeader>
+          <NavigationContent />
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
   return (
     <aside className="w-64 border-r bg-card">
       <div className="flex h-16 items-center border-b px-6">
         <h1 className="text-xl font-bold text-primary">PROJETO A+</h1>
       </div>
-
-      <nav className="space-y-1 p-4">
-        {filteredNavItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              {item.title}
-            </Link>
-          )
-        })}
-      </nav>
+      <NavigationContent />
     </aside>
   )
 }

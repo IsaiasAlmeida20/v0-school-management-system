@@ -74,6 +74,34 @@ export interface Transfer {
   status: "pending" | "approved" | "rejected"
 }
 
+export interface Exam {
+  id: string
+  name: string
+  number: 1 | 2 | 3 | 4
+  date: string
+}
+
+export interface ExamResult {
+  id: string
+  studentId: string
+  classId: string
+  examId: string
+  portugueseCriteria: {
+    criterio1: number // Leitura
+    criterio2: number // Interpretação
+    criterio3: number // Gramática
+    criterio4: number // Produção Textual
+    criterio5: number // Ortografia
+    criterio6: number // Coesão e Coerência
+  }
+  mathCriteria: {
+    criterio1: number // Números e Operações
+    criterio2: number // Geometria
+    criterio3: number // Grandezas e Medidas
+    criterio4: number // Tratamento da Informação
+  }
+}
+
 // Sample Schools
 export const SAMPLE_SCHOOLS: School[] = [
   {
@@ -244,6 +272,68 @@ export const SAMPLE_GRADES: Grade[] = SAMPLE_STUDENTS.flatMap((student) =>
     period: "1º Bimestre",
   })),
 )
+
+// Sample Exams (4 simulados per year)
+export const SAMPLE_EXAMS: Exam[] = [
+  { id: "exam-1", name: "1º Simulado", number: 1, date: "2024-03-15" },
+  { id: "exam-2", name: "2º Simulado", number: 2, date: "2024-05-20" },
+  { id: "exam-3", name: "3º Simulado", number: 3, date: "2024-08-10" },
+  { id: "exam-4", name: "4º Simulado", number: 4, date: "2024-10-25" },
+]
+
+// Generate sample exam results for all students
+export const SAMPLE_EXAM_RESULTS: ExamResult[] = SAMPLE_STUDENTS.flatMap((student) =>
+  SAMPLE_EXAMS.map((exam) => {
+    // Generate realistic progressive scores (students improve over time)
+    const baseScore = 5 + Math.random() * 3 // Base between 5-8
+    const progression = (exam.number - 1) * 0.3 // Improvement over exams
+
+    const generateScore = () => {
+      const score = baseScore + progression + (Math.random() * 1.5 - 0.5)
+      return Math.min(10, Math.max(0, Number(score.toFixed(1))))
+    }
+
+    return {
+      id: `exam-result-${student.id}-${exam.id}`,
+      studentId: student.id,
+      classId: student.classId,
+      examId: exam.id,
+      portugueseCriteria: {
+        criterio1: generateScore(),
+        criterio2: generateScore(),
+        criterio3: generateScore(),
+        criterio4: generateScore(),
+        criterio5: generateScore(),
+        criterio6: generateScore(),
+      },
+      mathCriteria: {
+        criterio1: generateScore(),
+        criterio2: generateScore(),
+        criterio3: generateScore(),
+        criterio4: generateScore(),
+      },
+    }
+  }),
+)
+
+// Helper function to calculate Portuguese average
+export const calculatePortugueseAverage = (criteria: ExamResult["portugueseCriteria"]) => {
+  const values = Object.values(criteria)
+  return values.reduce((sum, val) => sum + val, 0) / values.length
+}
+
+// Helper function to calculate Math average
+export const calculateMathAverage = (criteria: ExamResult["mathCriteria"]) => {
+  const values = Object.values(criteria)
+  return values.reduce((sum, val) => sum + val, 0) / values.length
+}
+
+// Helper function to calculate general average (Portuguese + Math)
+export const calculateGeneralAverage = (result: ExamResult) => {
+  const portugueseAvg = calculatePortugueseAverage(result.portugueseCriteria)
+  const mathAvg = calculateMathAverage(result.mathCriteria)
+  return (portugueseAvg + mathAvg) / 2
+}
 
 // Sample Enrollments
 export const SAMPLE_ENROLLMENTS: Enrollment[] = SAMPLE_STUDENTS.map((student) => ({

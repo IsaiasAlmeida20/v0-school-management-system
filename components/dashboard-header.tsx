@@ -12,9 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { LogOut, User } from "lucide-react"
+import { LogOut, User, Menu } from "lucide-react"
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  onMenuClick?: () => void
+}
+
+export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const { user, logout } = useAuth()
 
   if (!user) return null
@@ -27,10 +31,16 @@ export function DashboardHeader() {
     .slice(0, 2)
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-6">
-      <div>
-        <h2 className="text-lg font-semibold">Bem-vindo, {user.name.split(" ")[0]}</h2>
-        <p className="text-sm text-muted-foreground">{getRoleLabel(user.role)}</p>
+    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <div>
+          <h2 className="text-base md:text-lg font-semibold">Bem-vindo, {user.name.split(" ")[0]}</h2>
+          <p className="text-xs md:text-sm text-muted-foreground">{getRoleLabel(user.role)}</p>
+        </div>
       </div>
 
       <DropdownMenu>

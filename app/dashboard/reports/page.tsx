@@ -9,47 +9,55 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarChart3, TrendingUp, Users, GraduationCap, Download, FileText } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts"
 
 export default function ReportsPage() {
   const { user } = useAuth()
   const [selectedSchool, setSelectedSchool] = useState<string>("all")
   const [selectedPeriod, setSelectedPeriod] = useState<string>("current")
 
-  // Filter data based on user role
   let availableSchools = SAMPLE_SCHOOLS
   let availableClasses = SAMPLE_CLASSES
 
   if (user?.role === "coordenador") {
     availableSchools = SAMPLE_SCHOOLS.filter((s) => s.id === user.schoolId)
     availableClasses = SAMPLE_CLASSES.filter((c) => c.schoolId === user.schoolId)
-    setSelectedSchool(user.schoolId || "all")
   }
 
-  // Filter by selected school
   const filteredClasses =
     selectedSchool === "all" ? availableClasses : availableClasses.filter((c) => c.schoolId === selectedSchool)
 
   const filteredStudents = SAMPLE_STUDENTS.filter((s) => filteredClasses.some((c) => c.id === s.classId))
 
-  // Calculate overall statistics
   const totalStudents = filteredStudents.length
   const totalClasses = filteredClasses.length
 
-  // Calculate attendance rate
   const relevantAttendance = SAMPLE_ATTENDANCE.filter((a) => filteredClasses.some((c) => c.id === a.classId))
   const attendanceRate =
     relevantAttendance.length > 0
       ? Math.round((relevantAttendance.filter((a) => a.present).length / relevantAttendance.length) * 100)
       : 0
 
-  // Calculate average grade
   const relevantGrades = SAMPLE_GRADES.filter((g) => filteredClasses.some((c) => c.id === g.classId))
   const averageGrade =
     relevantGrades.length > 0
       ? (relevantGrades.reduce((sum, g) => sum + g.value, 0) / relevantGrades.length).toFixed(1)
       : "0.0"
 
-  // Calculate approval rate
   const studentAverages = filteredStudents.map((student) => {
     const studentGrades = relevantGrades.filter((g) => g.studentId === student.id)
     const avg = studentGrades.length > 0 ? studentGrades.reduce((sum, g) => sum + g.value, 0) / studentGrades.length : 0
@@ -60,16 +68,12 @@ export default function ReportsPage() {
       ? Math.round((studentAverages.filter((avg) => avg >= 7).length / studentAverages.length) * 100)
       : 0
 
-  // Performance by class
   const classPerformance = filteredClasses.map((classItem) => {
     const classStudents = SAMPLE_STUDENTS.filter((s) => s.classId === classItem.id)
     const classGrades = SAMPLE_GRADES.filter((g) => g.classId === classItem.id)
     const classAttendance = SAMPLE_ATTENDANCE.filter((a) => a.classId === classItem.id)
 
-    const avgGrade =
-      classGrades.length > 0
-        ? (classGrades.reduce((sum, g) => sum + g.value, 0) / classGrades.length).toFixed(1)
-        : "0.0"
+    const avgGrade = classGrades.length > 0 ? classGrades.reduce((sum, g) => sum + g.value, 0) / classGrades.length : 0
 
     const attRate =
       classAttendance.length > 0
@@ -78,37 +82,80 @@ export default function ReportsPage() {
 
     return {
       class: classItem,
+      name: classItem.name,
       students: classStudents.length,
-      averageGrade: avgGrade,
+      averageGrade: Number(avgGrade.toFixed(1)),
       attendanceRate: attRate,
     }
   })
 
-  // Performance by subject
   const subjects = Array.from(new Set(relevantGrades.map((g) => g.subject)))
   const subjectPerformance = subjects.map((subject) => {
     const subjectGrades = relevantGrades.filter((g) => g.subject === subject)
-    const avg =
-      subjectGrades.length > 0
-        ? (subjectGrades.reduce((sum, g) => sum + g.value, 0) / subjectGrades.length).toFixed(1)
-        : "0.0"
-    return { subject, average: avg }
+    const avg = subjectGrades.length > 0 ? subjectGrades.reduce((sum, g) => sum + g.value, 0) / subjectGrades.length : 0
+    return {
+      subject,
+      average: Number(avg.toFixed(1)),
+      name: subject,
+    }
   })
 
+  const trendData = [
+    { month: "Jan", attendance: 82, average: 7.2, approval: 78 },
+    { month: "Fev", attendance: 85, average: 7.5, approval: 80 },
+    { month: "Mar", attendance: 87, average: 7.8, approval: 83 },
+    { month: "Abr", attendance: 86, average: 7.6, approval: 82 },
+    { month: "Mai", attendance: 88, average: 7.9, approval: 85 },
+    { month: "Jun", attendance: attendanceRate, average: Number(averageGrade), approval: approvalRate },
+  ]
+
+  const gradeDistribution = [
+    { range: "0-4", count: studentAverages.filter((avg) => avg < 5).length },
+    { range: "5-6", count: studentAverages.filter((avg) => avg >= 5 && avg < 7).length },
+    { range: "7-8", count: studentAverages.filter((avg) => avg >= 7 && avg < 9).length },
+    { range: "9-10", count: studentAverages.filter((avg) => avg >= 9).length },
+  ]
+
+  const schoolComparison = availableSchools.map((school) => {
+    const schoolClasses = SAMPLE_CLASSES.filter((c) => c.schoolId === school.id)
+    const schoolStudents = SAMPLE_STUDENTS.filter((s) => schoolClasses.some((c) => c.id === s.classId))
+    const schoolGrades = SAMPLE_GRADES.filter((g) => schoolClasses.some((c) => c.id === g.classId))
+    const schoolAttendance = SAMPLE_ATTENDANCE.filter((a) => schoolClasses.some((c) => c.id === a.classId))
+
+    const avgGrade =
+      schoolGrades.length > 0
+        ? Number((schoolGrades.reduce((sum, g) => sum + g.value, 0) / schoolGrades.length).toFixed(1))
+        : 0
+
+    const attRate =
+      schoolAttendance.length > 0
+        ? Math.round((schoolAttendance.filter((a) => a.present).length / schoolAttendance.length) * 100)
+        : 0
+
+    return {
+      name: school.name,
+      students: schoolStudents.length,
+      average: avgGrade,
+      attendance: attRate,
+    }
+  })
+
+  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Relatórios e Desempenho</h1>
-          <p className="text-muted-foreground">Análise completa do desempenho acadêmico</p>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Relatórios e Desempenho</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">Análise completa do desempenho acadêmico</p>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" className="w-full sm:w-auto bg-transparent">
           <Download className="mr-2 h-4 w-4" />
           Exportar Relatório
         </Button>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row">
         {(user?.role === "admin" || user?.role === "coordenador_geral") && (
           <Select value={selectedSchool} onValueChange={setSelectedSchool}>
             <SelectTrigger className="w-full sm:w-[250px]">
@@ -136,7 +183,7 @@ export default function ReportsPage() {
         </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Alunos</CardTitle>
@@ -182,8 +229,29 @@ export default function ReportsPage() {
         </Card>
       </div>
 
+      {(user?.role === "admin" || user?.role === "coordenador_geral") && schoolComparison.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Comparação entre Escolas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={schoolComparison}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="average" fill="#3b82f6" name="Média" />
+                <Bar dataKey="attendance" fill="#10b981" name="Frequência %" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="classes" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="classes">Por Turma</TabsTrigger>
           <TabsTrigger value="subjects">Por Disciplina</TabsTrigger>
           <TabsTrigger value="trends">Tendências</TabsTrigger>
@@ -194,18 +262,37 @@ export default function ReportsPage() {
             <CardHeader>
               <CardTitle>Desempenho por Turma</CardTitle>
             </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={classPerformance}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="averageGrade" fill="#3b82f6" name="Média" />
+                  <Bar dataKey="attendanceRate" fill="#10b981" name="Frequência %" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalhes por Turma</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-4">
               {classPerformance.map((item) => {
                 const school = SAMPLE_SCHOOLS.find((s) => s.id === item.class.schoolId)
                 return (
                   <div key={item.class.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="font-medium">{item.class.name}</p>
                         <p className="text-sm text-muted-foreground">{school?.name}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">Média: {item.averageGrade}</p>
+                      <div className="text-left sm:text-right">
+                        <p className="text-sm font-medium">Média: {item.averageGrade.toFixed(1)}</p>
                         <p className="text-xs text-muted-foreground">{item.students} alunos</p>
                       </div>
                     </div>
@@ -228,21 +315,72 @@ export default function ReportsPage() {
             <CardHeader>
               <CardTitle>Desempenho por Disciplina</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {subjectPerformance.map((item) => (
-                <div key={item.subject} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">{item.subject}</p>
-                    <p className="text-sm font-medium">Média: {item.average}</p>
-                  </div>
-                  <Progress value={Number.parseFloat(item.average) * 10} />
-                </div>
-              ))}
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={subjectPerformance} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, 10]} />
+                  <YAxis dataKey="subject" type="category" width={100} />
+                  <Tooltip />
+                  <Bar dataKey="average" fill="#3b82f6" name="Média">
+                    {subjectPerformance.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição de Notas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={gradeDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ range, percent }) => `${range}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {gradeDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="trends" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Evolução ao Longo do Tempo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="attendance" stroke="#10b981" name="Frequência %" strokeWidth={2} />
+                  <Line type="monotone" dataKey="average" stroke="#3b82f6" name="Média" strokeWidth={2} />
+                  <Line type="monotone" dataKey="approval" stroke="#f59e0b" name="Aprovação %" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Análise de Tendências</CardTitle>
